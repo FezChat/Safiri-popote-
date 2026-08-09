@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>KINGBOT Analytics</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a class="brand" href="/index.html">KINGBOT</a>
+        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primaryNav">
+          <span></span>
+        </button>
+        <nav class="nav-links" id="primaryNav" aria-label="Main navigation">
+          <a href="/index.html">Home</a>
+          <a href="/dashboard.html">Dashboard</a>
+          <a href="/analytics.html">Analytics</a>
+          <a href="/strategies.html">Strategies</a>
+          <a href="/settings.html">Bot Settings</a>
+          <a href="/brokers.html">Broker Connect</a>
+          <a href="/pricing.html">Pricing</a>
+          <a href="/legal/privacy.html">Legal</a>
+        </nav>
+        <div class="nav-actions">
+          <a class="button-ghost" href="/index.html" id="logoutBtn">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="container page-intro reveal">
+        <span class="eyebrow">ADVANCED ANALYTICS</span>
+        <h1>Clear intelligence for every account and strategy.</h1>
+        <p>Monitor balance, win rate, profitability, and connected brokers from a premium analytics cockpit.</p>
+      </section>
+
+      <section class="container feature-grid reveal-stagger">
+        <article class="feature-card"><h3>Balance</h3><p id="balanceValue" class="skeleton">$100</p></article>
+        <article class="feature-card"><h3>Win rate</h3><p id="winRateValue" class="skeleton">94.2%</p></article>
+        <article class="feature-card"><h3>Monthly PnL</h3><p id="pnlValue" class="skeleton">+$14,280</p></article>
+        <article class="feature-card"><h3>Brokers connected</h3><p id="brokerCount" class="skeleton">0</p></article>
+      </section>
+
+      <section class="container dashboard-grid reveal-stagger">
+        <div class="panel">
+          <h2>Performance chart</h2>
+          <div class="mini-chart" style="height: 220px; margin-top: 0.5rem;"><div class="trend-line"></div><div class="trend-line two"></div></div>
+        </div>
+        <div class="panel">
+          <h2>Live market watch</h2>
+          <div id="marketList" class="skeleton" style="height: 64px;"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-row"><p>© <span class="year"></span> KINGBOT.</p></div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+      const token = localStorage.getItem('kingbotToken');
+      document.getElementById('logoutBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        localStorage.removeItem('kingbotToken');
+        window.location.replace('/login.html');
+      });
+      const loadAnalytics = async () => {
+        if (!token) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const res = await fetch('/api/analytics', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        ['balanceValue', 'winRateValue', 'pnlValue', 'brokerCount'].forEach((id) => document.getElementById(id).classList.remove('skeleton'));
+        document.getElementById('balanceValue').textContent = `$${data.balance}`;
+        document.getElementById('winRateValue').textContent = `${data.winRate}%`;
+        document.getElementById('pnlValue').textContent = `+$${data.monthlyPnL.toLocaleString()}`;
+        document.getElementById('brokerCount').textContent = data.connectedBrokers;
+      };
+      const loadMarkets = async () => {
+        const res = await fetch('/api/markets');
+        const data = await res.json();
+        const list = document.getElementById('marketList');
+        list.classList.remove('skeleton');
+        list.style.height = 'auto';
+        list.innerHTML = data.markets.map((market) => `
+          <div class="bot-card">
+            <div><strong>${market.symbol}</strong></div>
+            <div>${market.price} <span class="stat-pill">${market.change}</span></div>
+          </div>
+        `).join('');
+      };
+      loadAnalytics();
+      loadMarkets();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>KINGBOT Login</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a class="brand" href="/index.html">KINGBOT</a>
+        <div class="nav-actions">
+          <a class="button-ghost" href="/signup.html">Create account</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="container settings-grid reveal-stagger">
+        <form class="panel" id="loginForm">
+          <h2>Welcome back</h2>
+          <label>Email<input name="email" type="email" required autocomplete="email" /></label>
+          <label>Password<input name="password" type="password" required autocomplete="current-password" /></label>
+          <button class="button button-block" type="submit">Login</button>
+          <p id="loginMessage" class="status-text">Use your account to access the dashboard.</p>
+        </form>
+        <div class="panel">
+          <h2>Secure access</h2>
+          <ul class="list">
+            <li>Account-scoped data and analytics</li>
+            <li>Protected dashboard and broker controls</li>
+            <li>AI support and strategy control</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-row">
+        <p>© <span class="year"></span> KINGBOT.</p>
+        <div class="footer-links">
+          <a href="/legal/privacy.html">Privacy</a>
+          <a href="/legal/terms.html">Terms</a>
+          <a href="/legal/risk.html">Risk Disclosure</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+      document.getElementById('loginForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitButton = event.target.querySelector('button');
+        const messageEl = document.getElementById('loginMessage');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner"></span>Logging in';
+        const formData = new FormData(event.target);
+        const payload = Object.fromEntries(formData.entries());
+        try {
+          const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (response.ok) {
+            localStorage.setItem('kingbotToken', data.token);
+            messageEl.textContent = 'Login successful. Redirecting...';
+            messageEl.classList.remove('is-error');
+            window.location.replace('/dashboard.html');
+          } else {
+            localStorage.removeItem('kingbotToken');
+            messageEl.textContent = data.error || 'Login failed';
+            messageEl.classList.add('is-error');
+          }
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Login';
+        }
+      });
+    </script>
+  </body>
+</html>

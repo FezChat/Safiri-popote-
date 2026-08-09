@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>KINGBOT Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a class="brand" href="/index.html">KINGBOT</a>
+        <button class="nav-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="primaryNav">
+          <span></span>
+        </button>
+        <nav class="nav-links" id="primaryNav" aria-label="Main navigation">
+          <a href="/index.html">Home</a>
+          <a href="/dashboard.html">Dashboard</a>
+          <a href="/analytics.html">Analytics</a>
+          <a href="/strategies.html">Strategies</a>
+          <a href="/settings.html">Bot Settings</a>
+          <a href="/brokers.html">Broker Connect</a>
+          <a href="/pricing.html">Pricing</a>
+          <a href="/legal/privacy.html">Legal</a>
+        </nav>
+        <div class="nav-actions">
+          <a class="button-ghost" href="/index.html" id="logoutBtn">Logout</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="container page-intro reveal">
+        <div class="hero-actions" style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <div>
+            <span class="eyebrow">TRADING DESK</span>
+            <h1 id="welcomeTitle">Welcome back</h1>
+          </div>
+          <div class="toggle-group">
+            <button class="button secondary mode-btn active" data-mode="demo">Demo mode</button>
+            <button class="button secondary mode-btn" data-mode="live">Live mode</button>
+          </div>
+        </div>
+        <p>Your bot fleet, analytics, AI support, and broker connections are managed from one high-tech command center.</p>
+      </section>
+
+      <section class="container dashboard-grid reveal-stagger">
+        <article class="panel">
+          <h3>Account snapshot</h3>
+          <p id="accountInfo" class="skeleton">Loading account details</p>
+          <p id="modeInfo" class="stat-pill">Mode: demo</p>
+        </article>
+        <article class="panel">
+          <h3>Performance overview</h3>
+          <p id="brokerInfo" class="skeleton">Loading performance overview</p>
+        </article>
+      </section>
+
+      <section class="container dashboard-grid reveal-stagger">
+        <div class="panel">
+          <div class="section-heading">
+            <h2>Bot fleet</h2>
+            <button class="button" id="createBotBtn" type="button">Create bot</button>
+          </div>
+          <div id="botList" class="skeleton" style="height: 64px;"></div>
+        </div>
+        <div class="panel" id="paymentForm">
+          <h2>Upgrade plan</h2>
+          <form id="upgradeForm">
+            <label>Plan<select id="planSelect"><option value="starter">Starter $100</option><option value="professional">Professional $450</option><option value="enterprise">Enterprise $1400</option></select></label>
+            <button class="button button-block" type="submit">Activate plan</button>
+          </form>
+          <p id="paymentStatus" class="status-text">Manual payment also available at +27 748 275 015.</p>
+        </div>
+      </section>
+
+      <section class="container dashboard-grid reveal-stagger">
+        <div class="panel">
+          <h2>AI assistant</h2>
+          <input id="aiInput" placeholder="Ask about your strategy or broker" />
+          <button class="button" id="aiButton" style="margin-top: 0.6rem;">Send</button>
+          <p id="aiReply" class="status-text">AI assistant ready.</p>
+        </div>
+        <div class="panel">
+          <h2>Broker connect</h2>
+          <select id="brokerSelect"><option>MT5</option><option>OANDA</option><option>Binance</option><option>Interactive Brokers</option></select>
+          <button class="button" id="connectButton" style="margin-top: 0.6rem;">Connect broker</button>
+          <p id="brokerStatus" class="status-text">Demo mode until subscription is active.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-row">
+        <p>© <span class="year"></span> KINGBOT.</p>
+      </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+      const token = localStorage.getItem('kingbotToken');
+      const modeButtons = Array.from(document.querySelectorAll('.mode-btn'));
+
+      const setModeButtons = (mode) => {
+        modeButtons.forEach((button) => button.classList.toggle('active', button.dataset.mode === mode));
+      };
+
+      const loadUser = async () => {
+        if (!token) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const res = await fetch('/api/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          window.location.href = '/login.html';
+          return;
+        }
+        const data = await res.json();
+        document.getElementById('welcomeTitle').textContent = `Welcome back, ${data.user.name}`;
+        const accountInfo = document.getElementById('accountInfo');
+        accountInfo.classList.remove('skeleton');
+        accountInfo.textContent = `${data.user.email} • Plan: ${data.user.plan} • Balance: $${data.user.demoBalance}`;
+        document.getElementById('modeInfo').textContent = `Mode: ${data.user.mode || 'demo'}`;
+        setModeButtons(data.user.mode || 'demo');
+      };
+
+      const loadAnalytics = async () => {
+        if (!token) return;
+        const res = await fetch('/api/analytics', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        if (res.ok) {
+          const brokerInfo = document.getElementById('brokerInfo');
+          brokerInfo.classList.remove('skeleton');
+          brokerInfo.textContent = `${data.connectedBrokers} connected broker(s) • Win rate ${data.winRate}% • Active bots ${data.activeBots}`;
+        }
+      };
+
+      const loadBots = async () => {
+        if (!token) return;
+        const res = await fetch('/api/bots', { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        const list = document.getElementById('botList');
+        list.classList.remove('skeleton');
+        list.style.height = 'auto';
+        if (!res.ok) return;
+        if (!data.bots.length) {
+          list.innerHTML = '<p class="status-text">No bots yet. Create your first bot to get started.</p>';
+          return;
+        }
+        list.innerHTML = data.bots.map((bot) => `
+          <div class="bot-card">
+            <div>
+              <strong>${bot.name}</strong>
+              <div class="stat-pill">${bot.strategy} • ${bot.timeframe}</div>
+            </div>
+            <div class="toggle-group">
+              <button class="button secondary" data-action="toggle" data-id="${bot.id}">${bot.status === 'running' ? 'Pause' : 'Start'}</button>
+            </div>
+          </div>
+        `).join('');
+      };
+
+      document.getElementById('logoutBtn').addEventListener('click', (event) => {
+        event.preventDefault();
+        localStorage.removeItem('kingbotToken');
+        window.location.replace('/login.html');
+      });
+
+      modeButtons.forEach((button) => {
+        button.addEventListener('click', async () => {
+          const mode = button.dataset.mode;
+          const res = await fetch('/api/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ mode })
+          });
+          const payload = await res.json();
+          if (res.ok) {
+            setModeButtons(mode);
+            document.getElementById('modeInfo').textContent = `Mode: ${mode}`;
+            document.getElementById('brokerStatus').textContent = mode === 'live' ? 'Live mode activated' : 'Demo mode active';
+          } else {
+            document.getElementById('brokerStatus').textContent = payload.error || 'Mode change failed';
+          }
+        });
+      });
+
+      document.getElementById('createBotBtn').addEventListener('click', async (event) => {
+        const button = event.currentTarget;
+        button.disabled = true;
+        const originalText = button.textContent;
+        button.innerHTML = '<span class="spinner"></span>Creating';
+        const res = await fetch('/api/bots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: 'create' })
+        });
+        if (res.ok) {
+          await loadBots();
+        }
+        button.disabled = false;
+        button.textContent = originalText;
+      });
+
+      document.getElementById('botList').addEventListener('click', async (event) => {
+        const button = event.target.closest('button[data-action="toggle"]');
+        if (!button) return;
+        const res = await fetch('/api/bots', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ action: 'toggle', id: button.dataset.id })
+        });
+        if (res.ok) {
+          loadBots();
+        }
+      });
+
+      document.getElementById('upgradeForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const plan = document.getElementById('planSelect').value;
+        const submitButton = event.target.querySelector('button');
+        submitButton.disabled = true;
+        const res = await fetch('/api/payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ plan })
+        });
+        const payload = await res.json();
+        const statusEl = document.getElementById('paymentStatus');
+        statusEl.textContent = payload.message || payload.error;
+        statusEl.classList.toggle('is-error', !res.ok);
+        submitButton.disabled = false;
+        loadUser();
+      });
+
+      document.getElementById('aiButton').addEventListener('click', async () => {
+        const input = document.getElementById('aiInput');
+        const reply = document.getElementById('aiReply');
+        reply.innerHTML = '<span class="spinner"></span>Thinking...';
+        const response = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: input.value })
+        });
+        const payload = await response.json();
+        reply.textContent = payload.reply;
+      });
+
+      document.getElementById('connectButton').addEventListener('click', async () => {
+        const select = document.getElementById('brokerSelect');
+        const response = await fetch('/api/broker/connect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ broker: select.value })
+        });
+        const payload = await response.json();
+        document.getElementById('brokerStatus').textContent = `Connected to ${payload.connection?.broker || select.value}`;
+        loadAnalytics();
+      });
+
+      const planParam = new URLSearchParams(window.location.search).get('plan');
+      if (planParam) {
+        const planSelect = document.getElementById('planSelect');
+        const match = Array.from(planSelect.options).find((option) => option.value === planParam);
+        if (match) planSelect.value = match.value;
+      }
+
+      loadUser();
+      loadAnalytics();
+      loadBots();
+    </script>
+  </body>
+</html>

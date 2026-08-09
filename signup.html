@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <title>KINGBOT Sign Up</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="container nav-bar">
+        <a class="brand" href="/index.html">KINGBOT</a>
+        <div class="nav-actions">
+          <a class="button-ghost" href="/login.html">Login</a>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-shell">
+      <section class="container settings-grid reveal-stagger">
+        <form class="panel" id="signupForm">
+          <h2>Create account</h2>
+          <label>Name<input name="name" required autocomplete="name" /></label>
+          <label>Email<input name="email" type="email" required autocomplete="email" /></label>
+          <label>Password<input name="password" type="password" required minlength="6" autocomplete="new-password" /></label>
+          <button class="button button-block" type="submit">Create account</button>
+          <p id="signupMessage" class="status-text">Verification flow is enabled.</p>
+        </form>
+        <div class="panel">
+          <h2>What you get</h2>
+          <ul class="list">
+            <li>Free demo bot with $100 virtual balance</li>
+            <li>AI support agent access</li>
+            <li>Strategy templates and analytics dashboard</li>
+          </ul>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-row">
+        <p>© <span class="year"></span> KINGBOT.</p>
+        <div class="footer-links">
+          <a href="/legal/privacy.html">Privacy</a>
+          <a href="/legal/terms.html">Terms</a>
+          <a href="/legal/risk.html">Risk Disclosure</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="/app.js"></script>
+    <script>
+      document.getElementById('signupForm').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitButton = event.target.querySelector('button');
+        const messageEl = document.getElementById('signupMessage');
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner"></span>Creating account';
+        const formData = new FormData(event.target);
+        const payload = Object.fromEntries(formData.entries());
+        try {
+          const response = await fetch('/api/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (response.ok) {
+            localStorage.setItem('kingbotToken', data.token);
+            messageEl.textContent = 'Account created. Redirecting to your dashboard...';
+            messageEl.classList.remove('is-error');
+            window.location.replace('/dashboard.html');
+          } else {
+            messageEl.textContent = data.error || 'Signup failed';
+            messageEl.classList.add('is-error');
+          }
+        } finally {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Create account';
+        }
+      });
+    </script>
+  </body>
+</html>
